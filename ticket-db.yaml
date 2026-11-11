@@ -1,0 +1,68 @@
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ticket-db-pvc
+  namespace: telecom
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticket-db
+  namespace: telecom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ticket-db
+  template:
+    metadata:
+      labels:
+        app: ticket-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: ticket_user
+            - name: POSTGRES_PASSWORD
+              value: ticket_pass123
+            - name: POSTGRES_DB
+              value: ticket_db
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: ticket-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "384Mi"
+              cpu: "500m"
+      volumes:
+        - name: ticket-storage
+          persistentVolumeClaim:
+            claimName: ticket-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticket-db
+  namespace: telecom
+spec:
+  selector:
+    app: ticket-db
+  ports:
+    - port: 5432
+      targetPort: 5432
